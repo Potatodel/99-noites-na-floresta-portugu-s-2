@@ -1,0 +1,412 @@
+-- Biblioteca RedzLib carregada
+local redzlib = loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/refs/heads/main/Redzhubui"))()
+
+-- Janela principal
+local Window = redzlib:MakeWindow({
+    Title = "Zeta Hub X 99 nights in the forest",
+    SubTitle = "by S I L E N T",
+    SaveFolder = "ZetaHubUniversal"
+})
+
+Window:AddMinimizeButton({
+    Button = { Image = "rbxassetid://100006760882280", BackgroundTransparency = 0 },
+    Corner = { CornerRadius = UDim.new(0, 6) },
+})
+
+-- Serviços
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local humanoide = character:WaitForChild("Humanoid")
+
+LocalPlayer.CharacterAdded:Connect(function(chr)
+    character = chr
+    humanoide = chr:WaitForChild("Humanoid")
+end)
+
+-- 📱 Aba Discord
+local TabDiscord = Window:MakeTab({
+    Title = "Discord",
+    Icon = "rbxassetid://84198990394879"
+})
+
+TabDiscord:AddSection("Discord")
+
+TabDiscord:AddDiscordInvite({
+    Name = "Informações",
+    Description = "Link do Discord",
+    Logo = "rbxassetid://88800066762467",
+    Invite = "https://discord.gg/pzrtAEDBbt"
+})
+
+-- 🛠️ Aba Principal
+local TabMain = Window:MakeTab({
+    Title = "Principal",
+    Icon = "rbxassetid://106319096400681"
+})
+TabMain:AddSection("Principal")
+
+-- 🔥 Teleporte para fogueira à noite
+local posicaoFogueira = Vector3.new(0.32, 6.15, -0.22)
+local teleporteAtivado = false
+local conexaoTeleporte = nil
+
+TabMain:AddToggle({
+    Name = "Teleportar para fogueira à noite",
+    Default = false,
+    Callback = function(valor)
+        teleporteAtivado = valor
+        
+        if conexaoTeleporte then
+            conexaoTeleporte:Disconnect()
+            conexaoTeleporte = nil
+        end
+        
+        if valor then
+            conexaoTeleporte = RunService.Heartbeat:Connect(function()
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    if Lighting.ClockTime >= 18 or Lighting.ClockTime <= 6 then
+                        local hrp = character.HumanoidRootPart
+                        hrp.CFrame = CFrame.new(posicaoFogueira)
+                        hrp.Velocity = Vector3.new(0, 0, 0)
+                    end
+                end
+            end)
+        end
+    end
+})
+
+-- 🕴 Pulo Infinito
+local puloInfinito = false
+local conexaoPulo = nil
+
+TabMain:AddToggle({
+    Name = "Pulo infinito",
+    Default = false,
+    Callback = function(valor)
+        puloInfinito = valor
+        
+        if conexaoPulo then
+            conexaoPulo:Disconnect()
+            conexaoPulo = nil
+        end
+        
+        if valor then
+            conexaoPulo = UserInputService.JumpRequest:Connect(function()
+                if puloInfinito and humanoide and humanoide:GetState() ~= Enum.HumanoidStateType.Dead then
+                    humanoide:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end)
+        end
+    end
+})
+
+-- 🏃‍♂️ Controle de Velocidade
+local velocidadeAtivada = false
+local velocidadeAtual = 16
+local conexaoVelocidade = nil
+
+TabMain:AddToggle({
+    Name = "Ativar velocidade",
+    Default = false,
+    Callback = function(valor)
+        velocidadeAtivada = valor
+        
+        if conexaoVelocidade then
+            conexaoVelocidade:Disconnect()
+            conexaoVelocidade = nil
+        end
+        
+        if valor and humanoide then
+            humanoide.WalkSpeed = velocidadeAtual
+            conexaoVelocidade = RunService.Heartbeat:Connect(function()
+                if humanoide and velocidadeAtivada then
+                    humanoide.WalkSpeed = velocidadeAtual
+                end
+            end)
+        elseif humanoide then
+            humanoide.WalkSpeed = 16 -- Velocidade padrão
+        end
+    end
+})
+
+TabMain:AddSlider({
+    Name = "Valor da velocidade",
+    Min = 16,
+    Max = 1000,
+    Default = 16,
+    Color = Color3.fromRGB(255, 255, 255),
+    Increment = 1,
+    ValueName = "Velocidade",
+    Callback = function(valor)
+        velocidadeAtual = valor
+        if velocidadeAtivada and humanoide then
+            humanoide.WalkSpeed = valor
+        end
+    end
+})
+
+-- 🔫 Aba Combate
+local TabCombat = Window:MakeTab({
+    Title = "Combate",
+    Icon = "rbxassetid://7072706620" -- Ícone de espada
+})
+TabCombat:AddSection("Combate")
+
+-- Aura de Morte
+local auraMorteAtivada = false
+local alcanceAuraMorte = 50
+local conexaoAuraMorte = nil
+
+local function ehNPC(modelo)
+    if not modelo:IsA("Model") then return false end
+    if modelo:FindFirstChild("PlayerScripts") then return false end
+    if modelo == character then return false end
+    return modelo:FindFirstChildOfClass("Humanoid") ~= nil
+end
+
+local function matarNPC(npc)
+    if not npc or not npc.Parent then return end
+    
+    local humanoide = npc:FindFirstChildOfClass("Humanoid")
+    if humanoide and humanoide.Health > 0 then
+        humanoide.Health = 0
+    end
+end
+
+TabCombat:AddToggle({
+    Name = "Aura de Morte (apenas NPCs)",
+    Default = false,
+    Callback = function(valor)
+        auraMorteAtivada = valor
+        
+        if conexaoAuraMorte then
+            conexaoAuraMorte:Disconnect()
+            conexaoAuraMorte = nil
+        end
+        
+        if valor then
+            conexaoAuraMorte = RunService.Heartbeat:Connect(function()
+                if not character or not character.PrimaryPart then return end
+                
+                for _, npc in ipairs(workspace:GetDescendants()) do
+                    if ehNPC(npc) then
+                        local parteRaiz = npc:FindFirstChild("HumanoidRootPart") or npc.PrimaryPart
+                        if parteRaiz then
+                            local distancia = (character.PrimaryPart.Position - parteRaiz.Position).Magnitude
+                            if distancia <= alcanceAuraMorte then
+                                matarNPC(npc)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+TabCombat:AddSlider({
+    Name = "Alcance da Aura de Morte",
+    Min = 10,
+    Max = 100,
+    Default = 50,
+    Color = Color3.fromRGB(255, 0, 0),
+    Increment = 1,
+    ValueName = "Estudos",
+    Callback = function(valor)
+        alcanceAuraMorte = valor
+    end
+})
+
+-- 📦 Aba Coletar Itens
+local TabBring = Window:MakeTab({
+    Title = "Coletar",
+    Icon = "rbxassetid://44833679421829"
+})
+TabBring:AddSection("Coletar Itens")
+
+local function coletarItens(nomeItem, offsetY)
+    local raiz = character and character:FindFirstChild("HumanoidRootPart")
+    if not raiz then return end
+    
+    local offset = 0
+    for _, item in ipairs(workspace:GetDescendants()) do
+        if item:IsA("Model") and item.Name == nomeItem then
+            local parte = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+            if parte then
+                item:SetPrimaryPartCFrame(raiz.CFrame * CFrame.new(offset, offsetY or 2, 0))
+                offset = offset + 2
+                task.wait(0.1)
+            end
+        end
+    end
+end
+
+TabBring:AddButton({
+    Name = "Coletar todas as Toras",
+    Callback = function()
+        coletarItens("Log")
+    end
+})
+
+TabBring:AddButton({
+    Name = "Coletar todo o Carvão",
+    Callback = function()
+        coletarItens("Coal")
+    end
+})
+
+TabBring:AddButton({
+    Name = "Coletar todo o Combustível",
+    Callback = function()
+        coletarItens("Fuel Canister")
+    end
+})
+
+-- 🧿 Aba ESP
+local TabESP = Window:MakeTab({
+    Title = "ESP",
+    Icon = "rbxassetid://100059899467593"
+})
+TabESP:AddSection("Visuais")
+
+local baúsESP = {}
+local espBaúsAtivado = false
+local conexaoBaús = nil
+
+local function criarESP(baú)
+    if not baú or not baú.Parent or baúsESP[baú] then return end
+
+    local parte = baú:FindFirstChildWhichIsA("BasePart") or baú.PrimaryPart
+    if not parte then return end
+
+    local hl = Instance.new("Highlight")
+    hl.Name = "ESP_Highlight"
+    hl.FillColor = Color3.fromRGB(255, 255, 0)
+    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+    hl.FillTransparency = 0.3
+    hl.OutlineTransparency = 0
+    hl.Adornee = baú
+    hl.Parent = baú
+
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "ESP_Billboard"
+    bb.Adornee = parte
+    bb.Size = UDim2.new(0, 100, 0, 40)
+    bb.AlwaysOnTop = true
+    bb.Parent = baú
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3 = Color3.fromRGB(255, 255, 0)
+    lbl.TextStrokeTransparency = 0
+    lbl.TextScaled = true
+    lbl.Font = Enum.Font.SourceSansBold
+    lbl.Text = "Baú de Itens"
+    lbl.Parent = bb
+
+    local prompt = baú:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt then
+        if not prompt.Enabled or not prompt.Visible then
+            lbl.Text = "Coletado"
+            lbl.TextColor3 = Color3.fromRGB(255, 0, 0)
+        else
+            local conexao
+            conexao = prompt.Triggered:Connect(function()
+                lbl.Text = "Coletado"
+                lbl.TextColor3 = Color3.fromRGB(255, 0, 0)
+                if conexao then
+                    conexao:Disconnect()
+                end
+            end)
+            
+            prompt:GetPropertyChangedSignal("Enabled"):Connect(function()
+                if not prompt.Enabled then
+                    lbl.Text = "Coletado"
+                    lbl.TextColor3 = Color3.fromRGB(255, 0, 0)
+                    if conexao then
+                        conexao:Disconnect()
+                    end
+                end
+            end)
+        end
+    else
+        lbl.Text = "Coletado"
+        lbl.TextColor3 = Color3.fromRGB(255, 0, 0)
+    end
+
+    baúsESP[baú] = {
+        highlight = hl,
+        billboard = bb,
+        label = lbl,
+        prompt = prompt
+    }
+end
+
+local function removerTodosESPs()
+    for baú, dados in pairs(baúsESP) do
+        if dados.highlight then 
+            pcall(function() dados.highlight:Destroy() end)
+        end
+        if dados.billboard then 
+            pcall(function() dados.billboard:Destroy() end)
+        end
+    end
+    table.clear(baúsESP)
+end
+
+local function atualizarESPs()
+    removerTodosESPs()
+    if not espBaúsAtivado then return end
+    
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj.Name == "Item Chest" then
+            criarESP(obj)
+        end
+    end
+end
+
+TabESP:AddToggle({
+    Name = "ESP para Baús",
+    Default = false,
+    Callback = function(estado)
+        espBaúsAtivado = estado
+        
+        if conexaoBaús then
+            conexaoBaús:Disconnect()
+            conexaoBaús = nil
+        end
+        
+        if estado then
+            atualizarESPs()
+            conexaoBaús = workspace.DescendantAdded:Connect(function(obj)
+                if obj:IsA("Model") and obj.Name == "Item Chest" then
+                    task.wait(0.5)
+                    criarESP(obj)
+                end
+            end)
+        else
+            removerTodosESPs()
+        end
+    end
+})
+
+-- Limpeza ao encerrar o script
+game:GetService("Players").PlayerRemoving:Connect(function(jogador)
+    if jogador == LocalPlayer then
+        if conexaoTeleporte then conexaoTeleporte:Disconnect() end
+        if conexaoPulo then conexaoPulo:Disconnect() end
+        if conexaoBaús then conexaoBaús:Disconnect() end
+        if conexaoVelocidade then conexaoVelocidade:Disconnect() end
+        if conexaoAuraMorte then conexaoAuraMorte:Disconnect() end
+        removerTodosESPs()
+        if humanoide then
+            humanoide.WalkSpeed = 16
+        end
+    end
+end)
