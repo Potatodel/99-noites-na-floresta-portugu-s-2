@@ -40,7 +40,7 @@ TabDiscord:AddDiscordInvite({
     Name = "Informações",
     Description = "Link do Discord",
     Logo = "rbxassetid://88800066762467",
-    Invite = "https://discord.gg/pzrtAEDBbt"
+    Invite = "https://discord.gg/bTZtdUjxdB"
 })
 
 -- 🛠️ Aba Principal
